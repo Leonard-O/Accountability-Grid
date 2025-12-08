@@ -11,6 +11,7 @@ import { MonetizationProvider, useMonetization } from './components/Monetization
 import PremiumModal from './components/PremiumModal'
 import AdBanner from './components/AdBanner'
 import LandingPage from './components/LandingPage'
+import InstallPWA from './components/InstallPWA'
 import { Toaster, toast } from 'react-hot-toast';
 import './index.css'
 
@@ -225,6 +226,8 @@ const AppContent = ({ session }) => {
               Go Premium
             </button>
           )}
+
+          <InstallPWA />
 
           <button
             className="secondary-btn desktop-only"
