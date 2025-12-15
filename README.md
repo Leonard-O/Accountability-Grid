@@ -61,3 +61,13 @@ A gamified habit tracking application built with **React**, **Supabase**, and **
 This app is fully PWA compliant.
 - **Install**: Look for the install icon in Chrome/Edge or "Add to Home Screen" on iOS.
 - **Offline**: Basic navigation works without internet.
+
+### ❓ PWA Not Updating?
+If the app seems stuck on an old version:
+1.  **Close completely** (swipe away) and reopen.
+2.  The app checks for updates automatically on open.
+3.  If stuck, you will see a **"Force Update"** button in the Store, or the app will auto-reload when it detects a new version.
+
+---
+
+*Built by Antigravity* 🚀

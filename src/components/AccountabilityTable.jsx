@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { useMonetization } from './MonetizationContext';
+
 const AccountabilityTable = ({ data, onDayClick }) => {
+    const { isPremium, setShowPremiumModal } = useMonetization();
     const [viewMode, setViewMode] = useState('full'); // 'full' | 'monthly'
     const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -99,6 +102,16 @@ const AccountabilityTable = ({ data, onDayClick }) => {
                             <ChevronRight size={16} />
                         </button>
                     </div>
+                )}
+
+                {!isPremium && (
+                    <button
+                        className="primary-btn premium-btn"
+                        onClick={() => setShowPremiumModal(true)}
+                        style={{ marginLeft: 'auto' }}
+                    >
+                        Go Premium
+                    </button>
                 )}
             </div>
 
