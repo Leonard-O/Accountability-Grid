@@ -112,7 +112,7 @@ const Marketplace = () => {
                     <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Customize your experience and boost your progress.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '2rem', textAlign: 'center' }}>
-                    <div className="coin-display">
+                    <div className="coin-display" title="Earn 1 coin per 5 minutes of study!">
                         <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'gold' }}>{coins}</div>
                         <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7 }}>Coins</div>
                         <div style={{ fontSize: '0.6rem', color: '#888', marginTop: '2px' }}>1 coin / 5min</div>
