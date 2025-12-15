@@ -254,6 +254,9 @@ const Marketplace = () => {
                     </div>
                 </>
             )}
+            <div style={{ textAlign: 'center', marginTop: '2rem', opacity: 0.3, fontSize: '0.7rem' }}>
+                v2.1 (PWA Fix)
+            </div>
         </div>
     );
 };
