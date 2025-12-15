@@ -61,7 +61,3 @@ A gamified habit tracking application built with **React**, **Supabase**, and **
 This app is fully PWA compliant.
 - **Install**: Look for the install icon in Chrome/Edge or "Add to Home Screen" on iOS.
 - **Offline**: Basic navigation works without internet.
-
----
-
-*Built by Antigravity* 🚀
