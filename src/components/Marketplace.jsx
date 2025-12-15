@@ -256,7 +256,7 @@ const Marketplace = () => {
             )}
 
             <div style={{ textAlign: 'center', marginTop: '3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ color: '#ff4444', fontWeight: 'bold', fontSize: '0.8rem' }}>v2.2 (Live)</span>
+                <span style={{ color: '#000', fontWeight: 'bold', fontSize: '1rem', background: 'yellow', padding: '5px 10px', borderRadius: '4px' }}>v3.0 (CACHE BUSTED)</span>
                 <button
                     onClick={async () => {
                         if ('serviceWorker' in navigator) {
