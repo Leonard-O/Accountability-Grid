@@ -16,6 +16,46 @@
 
 <body>
   <div id="root"></div>
+  <script>
+    // nuclear-cache-buster.js
+    (function() {
+      const CHECK_INTERVAL = 60 * 60 * 1000; // Check every hour if open
+      
+      function checkVersion() {
+        fetch('/version.json?t=' + Date.now())
+          .then(res => res.json())
+          .then(data => {
+            const current = localStorage.getItem('app_version');
+            console.log("Checking version:", current, "vs", data.version);
+            
+            if (current && current !== data.version) {
+              console.log("New version found! Nuking cache...");
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(regs => {
+                  for(let reg of regs) reg.unregister();
+                  localStorage.setItem('app_version', data.version);
+                  window.location.reload(true);
+                });
+              } else {
+                 localStorage.setItem('app_version', data.version);
+                 window.location.reload(true);
+              }
+            } else {
+               localStorage.setItem('app_version', data.version);
+            }
+          })
+          .catch(err => console.log("Version check failed (offline?)", err));
+      }
+
+      // Check on load
+      checkVersion();
+      
+      // Check on visibility change (re-opening app)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkVersion();
+      });
+    })();
+  </script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
