@@ -254,8 +254,30 @@ const Marketplace = () => {
                     </div>
                 </>
             )}
-            <div style={{ textAlign: 'center', marginTop: '2rem', opacity: 0.3, fontSize: '0.7rem' }}>
-                v2.1 (PWA Fix)
+
+            <div style={{ textAlign: 'center', marginTop: '3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ color: '#ff4444', fontWeight: 'bold', fontSize: '0.8rem' }}>v2.2 (Live)</span>
+                <button
+                    onClick={async () => {
+                        if ('serviceWorker' in navigator) {
+                            const registrations = await navigator.serviceWorker.getRegistrations();
+                            for (const registration of registrations) {
+                                await registration.unregister();
+                            }
+                        }
+                        window.location.reload(true);
+                    }}
+                    style={{
+                        background: '#333',
+                        border: '1px solid #555',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        color: '#ddd'
+                    }}
+                >
+                    🔄 Force Update App
+                </button>
             </div>
         </div>
     );
