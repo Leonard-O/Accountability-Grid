@@ -71,13 +71,26 @@ const AppContent = ({ session }) => {
     if (dayIndex > todayIndex) return;
 
     // Check if already studied
+    // Check if already studied
     if (data[dayIndex] === 'studied') {
-      // Calculate position (center above clicked element)
       const rect = e.target.getBoundingClientRect();
+
+      // If it's a past day, it's permanent history (cannot unmark)
+      if (dayIndex < todayIndex) {
+        setInfoPopover({
+          isOpen: true,
+          x: rect.left + rect.width / 2,
+          y: rect.top - 10,
+          message: "History is written! 🏛️" // Or "Good job!"
+        });
+        return;
+      }
+
+      // If it's today, allow unmarking
       setConfirmPopover({
         isOpen: true,
-        x: rect.left + rect.width / 2, // Center X
-        y: rect.top - 10, // Just above Y
+        x: rect.left + rect.width / 2,
+        y: rect.top - 10,
         dayIndex
       });
       return;
