@@ -28,7 +28,7 @@ const AppContent = ({ session }) => {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const { showPremiumModal, setShowPremiumModal, isPremium, refreshUser, level, xp } = useMonetization();
+  const { showPremiumModal, setShowPremiumModal, isPremium, refreshUser, level, xp, activeTheme } = useMonetization();
 
   // 2. Fetch Logs when Session exists
   useEffect(() => {

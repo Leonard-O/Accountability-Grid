@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { Snowflake, Palette, Music, Lock, ShoppingBag, Zap } from 'lucide-react';
 import { useMonetization } from './MonetizationContext';
+import { supabase } from '../supabase';
 import { toast } from 'react-hot-toast';
 
 const Marketplace = () => {
-    const { coins, streakFreezes, isPremium, purchaseItem } = useMonetization();
+    const {
+        coins, streakFreezes, isPremium,
+        inventory, activeTheme, isBoostActive,
+        buyTheme, buyBoost, buyFreeze, equipTheme
+    } = useMonetization();
     const [confirmPopover, setConfirmPopover] = useState({ isOpen: false, x: 0, y: 0, item: null });
 
     const items = [
@@ -15,7 +20,8 @@ const Marketplace = () => {
             icon: <Snowflake size={32} color="#00d2ff" />,
             cost: 50,
             type: 'powerup',
-            premiumOnly: false
+            premiumOnly: false,
+            handler: () => buyFreeze(50)
         },
         {
             id: 'theme_gold',
@@ -23,8 +29,9 @@ const Marketplace = () => {
             description: 'Apply the exclusive Gold Theme.',
             icon: <Palette size={32} color="gold" />,
             cost: 500,
-            type: 'cosmetic',
-            premiumOnly: true
+            type: 'theme',
+            premiumOnly: true,
+            handler: () => buyTheme('theme_gold', 500)
         },
         {
             id: 'sound_pack_rain',
@@ -33,7 +40,8 @@ const Marketplace = () => {
             icon: <Music size={32} color="#a855f7" />,
             cost: 200,
             type: 'sound',
-            premiumOnly: false
+            premiumOnly: false,
+            handler: () => toast("Coming soon!") // Placeholder
         },
         {
             id: 'xp_boost_1h',
@@ -41,14 +49,39 @@ const Marketplace = () => {
             description: 'Double XP for the next hour.',
             icon: <Zap size={32} color="#f59e0b" />,
             cost: 150,
-            type: 'powerup',
-            premiumOnly: false
+            type: 'boost',
+            premiumOnly: false,
+            handler: () => buyBoost(1, 150)
         }
     ];
 
-    const handleBuy = (item, e) => {
+    const getButtonState = (item) => {
+        // Theme Logic
+        if (item.type === 'theme') {
+            const owned = inventory.includes(item.id);
+            if (activeTheme === item.id) return { text: "Active", disabled: true, action: null };
+            if (owned) return { text: "Equip", disabled: false, action: () => equipTheme(item.id) };
+            return { text: "Buy", disabled: false, action: (e) => confirmPurchase(item, e) };
+        }
+
+        // Boost Logic
+        if (item.type === 'boost') {
+            if (isBoostActive()) return { text: "Active", disabled: true, action: null };
+            return { text: "Buy", disabled: false, action: (e) => confirmPurchase(item, e) };
+        }
+
+        return { text: "Buy", disabled: false, action: (e) => confirmPurchase(item, e) };
+    };
+
+    const confirmPurchase = (item, e) => {
         if (item.premiumOnly && !isPremium) {
             toast.error("This item is reserved for Focus+ members!");
+            return;
+        }
+
+        // Client-side Fund Check
+        if (item.cost > coins) {
+            toast.error(`Not enough coins! You need ${item.cost - coins} more. 🪙`);
             return;
         }
 
@@ -79,9 +112,10 @@ const Marketplace = () => {
                     <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Customize your experience and boost your progress.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '2rem', textAlign: 'center' }}>
-                    <div>
+                    <div className="coin-display">
                         <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'gold' }}>{coins}</div>
                         <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7 }}>Coins</div>
+                        <div style={{ fontSize: '0.6rem', color: '#888', marginTop: '2px' }}>1 coin / 5min</div>
                     </div>
                     <div>
                         <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#00d2ff' }}>{streakFreezes}</div>
@@ -96,59 +130,65 @@ const Marketplace = () => {
                 gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
                 gap: '1.5rem'
             }}>
-                {items.map(item => (
-                    <div key={item.id} className="glass-panel product-card" style={{
-                        padding: '1.5rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '1rem',
-                        position: 'relative',
-                        transition: 'transform 0.2s',
-                        cursor: 'default'
-                    }}>
-                        {item.premiumOnly && (
-                            <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'hsl(45, 100%, 50%)', color: 'black', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Lock size={10} /> PLUS
-                            </div>
-                        )}
+                {items.map(item => {
+                    const { text, disabled, action } = getButtonState(item);
 
-                        <div style={{
-                            background: 'rgba(255,255,255,0.05)',
-                            height: '100px',
-                            borderRadius: '12px',
+                    return (
+                        <div key={item.id} className="glass-panel product-card" style={{
+                            padding: '1.5rem',
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginBottom: '0.5rem'
+                            flexDirection: 'column',
+                            gap: '1rem',
+                            position: 'relative',
+                            transition: 'transform 0.2s',
+                            cursor: 'default',
+                            opacity: (item.premiumOnly && !isPremium) ? 0.7 : 1
                         }}>
-                            {item.icon}
-                        </div>
+                            {item.premiumOnly && (
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'hsl(45, 100%, 50%)', color: 'black', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Lock size={10} /> PLUS
+                                </div>
+                            )}
 
-                        <div style={{ flex: 1 }}>
-                            <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{item.name}</h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>{item.description}</p>
-                        </div>
-
-                        <button
-                            className="secondary-btn"
-                            onClick={(e) => handleBuy(item, e)}
-                            style={{
-                                width: '100%',
-                                marginTop: 'auto',
-                                background: item.premiumOnly && !isPremium ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.15)',
-                                color: item.premiumOnly && !isPremium ? '#555' : 'white',
-                                cursor: item.premiumOnly && !isPremium ? 'not-allowed' : 'pointer',
+                            <div style={{
+                                background: 'rgba(255,255,255,0.05)',
+                                height: '100px',
+                                borderRadius: '12px',
                                 display: 'flex',
-                                justifyContent: 'space-between',
                                 alignItems: 'center',
-                                padding: '0.8rem 1rem'
-                            }}
-                        >
-                            <span>Buy</span>
-                            <span style={{ fontWeight: 'bold', color: item.premiumOnly && !isPremium ? '#555' : 'gold' }}>{item.cost} 🪙</span>
-                        </button>
-                    </div>
-                ))}
+                                justifyContent: 'center',
+                                marginBottom: '0.5rem'
+                            }}>
+                                {item.icon}
+                            </div>
+
+                            <div style={{ flex: 1 }}>
+                                <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{item.name}</h3>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>{item.description}</p>
+                            </div>
+
+                            <button
+                                className="secondary-btn"
+                                onClick={action || undefined}
+                                disabled={disabled}
+                                style={{
+                                    width: '100%',
+                                    marginTop: 'auto',
+                                    background: disabled ? 'rgba(255,255,255,0.1)' : (item.premiumOnly && !isPremium ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.15)'),
+                                    color: disabled ? '#888' : (item.premiumOnly && !isPremium ? '#555' : 'white'),
+                                    cursor: disabled || (item.premiumOnly && !isPremium) ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '0.8rem 1rem'
+                                }}
+                            >
+                                <span>{text}</span>
+                                {text === 'Buy' && <span style={{ fontWeight: 'bold', color: item.premiumOnly && !isPremium ? '#555' : 'gold' }}>{item.cost} 🪙</span>}
+                            </button>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Purchase Confirmation Popover */}
@@ -188,10 +228,10 @@ const Marketplace = () => {
                             <button
                                 className="primary-btn"
                                 onClick={async () => {
-                                    const success = await purchaseItem(confirmPopover.item.cost, confirmPopover.item.id);
+                                    setConfirmPopover({ ...confirmPopover, isOpen: false });
+                                    const success = await confirmPopover.item.handler();
                                     if (success) {
                                         toast.success(`Purchased ${confirmPopover.item.name}!`);
-                                        setConfirmPopover({ ...confirmPopover, isOpen: false });
                                     }
                                 }}
                                 style={{

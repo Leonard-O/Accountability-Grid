@@ -16,17 +16,17 @@ export const MonetizationProvider = ({ children, session }) => {
     const [badges, setBadges] = useState([]);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
 
-    useEffect(() => {
-        if (session?.user) {
-            fetchUserStatus();
-            fetchBadges();
-        }
-    }, [session]);
+    // Phase 3 States
+    const [inventory, setInventory] = useState([]);
+    const [activeTheme, setActiveTheme] = useState('default');
+    const [xpBoostExpiresAt, setXpBoostExpiresAt] = useState(null);
 
-    const fetchUserStatus = async () => {
+    const refreshUser = async () => {
+        if (!session?.user) return;
+
         const { data, error } = await supabase
             .from('profiles')
-            .select('subscription_tier, coins, streak_freeze_count, exp_points, level')
+            .select('subscription_tier, coins, streak_freeze_count, exp_points, level, active_theme, xp_boost_expires_at')
             .eq('id', session.user.id)
             .single();
 
@@ -36,14 +36,24 @@ export const MonetizationProvider = ({ children, session }) => {
             setStreakFreezes(data.streak_freeze_count);
             setXp(data.exp_points || 0);
             setLevel(data.level || 1);
-
-            // Simple premium check
+            setActiveTheme(data.active_theme || 'default');
+            setXpBoostExpiresAt(data.xp_boost_expires_at ? new Date(data.xp_boost_expires_at) : null);
             setIsPremium(data.subscription_tier !== 'free');
+        }
+
+        const { data: inv } = await supabase
+            .from('user_inventory')
+            .select('item_id')
+            .eq('user_id', session.user.id);
+
+        if (inv) {
+            setInventory(inv.map(i => i.item_id));
         }
     };
 
     const fetchBadges = async () => {
-        const { data, error } = await supabase
+        if (!session?.user) return;
+        const { data } = await supabase
             .from('user_badges')
             .select('badge_id')
             .eq('user_id', session.user.id);
@@ -53,8 +63,18 @@ export const MonetizationProvider = ({ children, session }) => {
         }
     };
 
+    useEffect(() => {
+        if (session?.user) {
+            refreshUser();
+            fetchBadges();
+        }
+    }, [session]);
+
+    const isBoostActive = () => {
+        return xpBoostExpiresAt && new Date() < xpBoostExpiresAt;
+    };
+
     const purchaseSubscription = async (newTier) => {
-        // Mock Purchase
         const { error } = await supabase
             .from('profiles')
             .update({ subscription_tier: newTier })
@@ -68,68 +88,111 @@ export const MonetizationProvider = ({ children, session }) => {
         }
     };
 
-    const purchaseItem = async (cost, itemName) => {
-        if (coins >= cost) {
-            // Deduct coins (Mock)
-            const newBalance = coins - cost;
-            await supabase.from('profiles').update({ coins: newBalance }).eq('id', session.user.id);
-            setCoins(newBalance);
-            return true;
-        } else {
+    const buyTheme = async (itemId, cost) => {
+        const { data: success, error } = await supabase.rpc('purchase_theme', { p_item_id: itemId, p_cost: cost });
+        if (error) {
+            toast.error(error.message);
+            return false;
+        }
+        if (!success) {
+            toast.error("Purchase failed (Funds? Already Owned?)");
+            return false;
+        }
+        await refreshUser();
+        return true;
+    };
+
+    const buyBoost = async (durationHours, cost) => {
+        const { data: success, error } = await supabase.rpc('activate_xp_boost', { p_duration_hours: durationHours, p_cost: cost });
+        if (error) {
+            toast.error(error.message);
+            return false;
+        }
+        if (!success) {
+            toast.error("Insufficient coins!");
+            return false;
+        }
+        await refreshUser();
+        return true;
+    };
+
+    const buyFreeze = async (cost) => {
+        if (coins < cost) {
             toast.error("Not enough coins!");
             return false;
         }
+        const { error } = await supabase
+            .from('profiles')
+            .update({
+                coins: coins - cost,
+                streak_freeze_count: streakFreezes + 1
+            })
+            .eq('id', session.user.id);
+
+        if (error) {
+            toast.error("Transaction failed");
+            return false;
+        }
+        refreshUser();
+        return true;
+    };
+
+    const equipTheme = async (themeId) => {
+        const { error } = await supabase
+            .from('profiles')
+            .update({ active_theme: themeId })
+            .eq('id', session.user.id);
+
+        if (error) {
+            toast.error("Failed to equip");
+            return;
+        }
+        setActiveTheme(themeId);
+        toast.success("Theme applied! 🎨");
     };
 
     const awardXP = async (amount) => {
-        const newXp = xp + amount;
-        let newLevel = level;
+        // Boost Logic
+        const multiplier = isBoostActive() ? 2 : 1;
+        const finalAmount = amount * multiplier;
 
-        // Simple Leveling Logic: Level * 100 XP to advance
-        // Level 1 -> 2 needs 100 XP
-        // Level 2 -> 3 needs 200 XP
+        const newXp = xp + finalAmount;
+        let newLevel = level;
         const xpToNextLevel = level * 100;
 
         if (newXp >= xpToNextLevel) {
             newLevel += 1;
-            toast(`🎉 LEVEL UP! You reached Level ${newLevel}!`, {
-                icon: '🚀',
-                style: {
-                    borderRadius: '10px',
-                    background: '#333',
-                    color: '#fff',
-                },
-            });
+            toast(`🎉 LEVEL UP! You reached Level ${newLevel}!`, { icon: '🚀' });
+        }
+
+        if (multiplier > 1) {
+            toast(`XP Boost Active! +${finalAmount} XP (2x)`, { icon: '⚡' });
         }
 
         setXp(newXp);
         setLevel(newLevel);
 
-        // Save to DB
         await supabase.from('profiles').update({
             exp_points: newXp,
             level: newLevel
         }).eq('id', session.user.id);
     };
 
+    const purchaseItem = async () => false; // Deprecated placeholder
+
     return (
         <MonetizationContext.Provider value={{
-            isPremium,
-            tier,
-            coins,
-            streakFreezes,
-            streakFreezes,
-            xp,
-            level,
+            xp, level, coins,
+            streakFreezes, isPremium, tier,
+            inventory, activeTheme,
+            isBoostActive,
+            refreshUser,
+            buyTheme, buyBoost, buyFreeze, equipTheme,
             badges,
-            showPremiumModal,
-            setShowPremiumModal,
+            showPremiumModal, setShowPremiumModal,
             purchaseSubscription,
             purchaseItem,
-            purchaseSubscription,
-            purchaseItem,
-            awardXP,
-            refreshUser: fetchUserStatus
+            awardXP
         }}>
             {children}
         </MonetizationContext.Provider>

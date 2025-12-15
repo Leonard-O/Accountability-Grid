@@ -676,3 +676,32 @@ input:checked+.slider:before {
     grid-column: span 1;
   }
 }
+
+/* --- THEMES --- */
+.theme-gold {
+  --bg-color: 40, 40%, 10%;
+  --accent-green: 45, 100%, 50%; /* Gold */
+  --glass-border: 255, 215, 0, 0.3;
+  --glass-bg: rgba(40, 30, 10, 0.8);
+}
+
+.theme-gold .app-title {
+  background: linear-gradient(to right, #FFD700, #FFA500);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5));
+}
+
+.theme-gold .nav-group button.active {
+    background: linear-gradient(45deg, #FFD700, #FFA500);
+    color: black;
+    border-color: #FFD700;
+}
+
+.theme-gold .day-cell.studied {
+    background: rgba(255, 215, 0, 0.3);
+    border-color: #FFD700;
+    color: #FFD700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+}
